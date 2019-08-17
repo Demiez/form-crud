@@ -9,3 +9,5 @@
 7) for now 2 buttons:<br>
 ok - updates data
 cancel - must clear all the inputs
+8) + mandatory fields marked with red * (had to mutate object to avoid * in property and to save all validation checks)
+9)
