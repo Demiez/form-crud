@@ -170,17 +170,17 @@ let form  = new Form (formContainer, {
 }, () => console.log('ok'), () => console.log('cancel'));
 
 
-console.log(index.data);
-index.okCallback = () => console.log(index.data);
+console.log(form.data);
+form.okCallback = () => console.log(form.data);
 
 //form.validators.name = (value, key, data, input) => value[0].toUpperCase() == value[0] && !value.includes(' ') && value.length > 2 ? true : 'Wrong name'
 
-index.validators.name = (value, key, data, input) =>
+form.validators.name = (value, key, data, input) =>
     value.length > 2 &&
     value[0].toUpperCase() == value[0] &&
     !value.includes(' ') ? true : 'Wrong name'
 
-index.validators.surname = (value, key, data, input) =>
+form.validators.surname = (value, key, data, input) =>
     value.length > 2 &&
     value[0].toUpperCase() == value[0] &&
     !value.includes(' ') ? true : 'Wrong name'
