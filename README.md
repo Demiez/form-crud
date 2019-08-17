@@ -1,5 +1,5 @@
 # form-crud
-### SRS: Create form constructor. Check on GitPages [here](https://demiez.github.io/form-crud/)
+### SRS: Create form constructor with validations of input fields. Check on GitPages [here](https://demiez.github.io/form-crud/)
 1) create form constructor
 2) all layout (except container) is planned to be created with Javascript
 3) an object provided to constructor can contain different inputs (name, surname, boolean data(married, has children and so on)) and buttons (with callbacks for actions)
