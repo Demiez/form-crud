@@ -1,4 +1,4 @@
-# form-crud
+# form-crud-validation
 ### SRS: Create form constructor with validations of input fields. Check on GitPages [here](https://demiez.github.io/form-crud/)
 1) create form constructor
 2) all layout (except container) is planned to be created with Javascript
