@@ -1,5 +1,4 @@
 function Form(el, data, okCallback, cancelCallback) {
-
     // const renameKey = (oldkey,newkey,{ [oldkey] : old, ...others }) => {
     //     return {
     //         [newkey]: old, ...others
@@ -42,6 +41,7 @@ function Form(el, data, okCallback, cancelCallback) {
             this.addErrorBox(formBody,key);
             input.setAttribute("type", "text");
             input.setAttribute("placeholder", key);
+            input.setAttribute("id", key);
             input.value = value;
             return input;
         },
@@ -89,6 +89,7 @@ function Form(el, data, okCallback, cancelCallback) {
             if (mandatory) {
                 key = key.substring(1);
                 input.setAttribute("class", "mandatory");
+                input.setAttribute("id", key);
             }
             this.addErrorBox(label,key);
             input.setAttribute("type", "date");
@@ -98,6 +99,7 @@ function Form(el, data, okCallback, cancelCallback) {
             date += value.getDay() < 10 ? `-0${value.getDay()}` : `-${value.getDay()}`;
 
             input.setAttribute("value", date);
+            input.setAttribute("id", key);
             return input;
         },
 
@@ -124,7 +126,9 @@ function Form(el, data, okCallback, cancelCallback) {
             formBody.appendChild(passwordConfirm);
 
             passwordInput.setAttribute("type", "text");
+            passwordInput.setAttribute("id", key);
             passwordConfirm.setAttribute("type", "text");
+            passwordConfirm.setAttribute("id", `confirm-${key}`);
             this.addErrorBox(formBody,'password-confirm');
             return [passwordInput, passwordConfirm];
         }
@@ -132,7 +136,7 @@ function Form(el, data, okCallback, cancelCallback) {
 
     // form + h
     let formBody = document.createElement('div');
-    formBody.innerHTML = '<h1>Here will be the form</h1>'
+    formBody.innerHTML = '<h1>Here will be the form</h1>';
 
     // ##### Creating inputs in DOM
 
@@ -149,14 +153,17 @@ function Form(el, data, okCallback, cancelCallback) {
                 key = key.substring(1);
             }
             input.oninput = () => {
-                data[key] = input.value;
+                this.validators.highlightMandatory(input);
+
                 if (typeof this.validators[key] == "function") {
                     if (typeof this.validators[key](data[key]) == "string") {
                         document.getElementById(`${key}-error`).innerText = `${this.validators[key](data[key])}`;
+                        data[key] = "";
                     } else {
                         document.getElementById(`${key}-error`).innerText = ``;
                     }
-                } else {
+                }
+                else {
                     console.log("no validator attached")
                 }
             }
@@ -178,9 +185,12 @@ function Form(el, data, okCallback, cancelCallback) {
                 key = key.substring(1);
             }
             input.oninput = () => {
+                this.validators.highlightMandatory(input);
                 if (typeof this.validators[key] == "function") {
                     if (this.validators[key](input, key)) {
                         data[key] = input.value;
+                    } else {
+                        data[key] = "";
                     }
                 }
             }
@@ -189,31 +199,40 @@ function Form(el, data, okCallback, cancelCallback) {
         } else if (value.match(emailRegEx)) {
             let input = inputCreators.string(key,value);
             input.oninput = () => {
+                this.validators.highlightMandatory(input);
                 if (typeof this.validators[key] == "function") {
                     if (this.validators[key](input, key, emailRegEx)) {
                         data[key] = input.value;
                     }
                 }
             }
+        //### Password input + built in medium strength password validation (6 letters + 1 number or 1 uppercase)
         } else if (value.includes("*")) {
-            let input = inputCreators.password(key,value);
+            let input = inputCreators.password(key, value);
             if (key[0] == "*") {
                 renameKey(key, key.substring(1), data);
                 key = key.substring(1);
             }
-            for (i of input)
-                console.log(key)
-                i.oninput = () => {
-                    console.log(key)
-                    if (typeof this.validators[key] == "function") {
-                        console.log("!!");
-                        if (i == passwordInput)
-                        if (this.validators[key](input, key, passwordRegEx)) {
-                            data[key] = input.value;
+            data[key] = "";
+            input[0].oninput = () => {
+                this.validators.highlightMandatory(input[0]);
+                if (typeof this.validators[key] == "function") {
+                    if (this.validators[key](input[0], key, passwordRegEx)) {
+                        input[1].oninput = () => {
+                            console.log("checking pass")
+                            if (input[1].value === input[0].value) {
+                                document.getElementById(`password-confirm-error`).style['color'] = `green`;
+                                document.getElementById(`password-confirm-error`).innerText = ` ok`;
+                                data[key] = input[0].value;
+                            } else {
+                                document.getElementById(`password-confirm-error`).style['color'] = `red`;
+                                document.getElementById(`password-confirm-error`).innerText = ` Please confirm password in both fields`;
+                            }
                         }
                     }
                 }
             }
+        }
     }
 
 
@@ -227,20 +246,60 @@ function Form(el, data, okCallback, cancelCallback) {
 
     if (typeof okCallback === 'function') {
         formBody.appendChild(okButton);
-        okButton.onclick = (e) => { // arrow function keeps this (is hidden bind)
-            this.okCallback(e)
+        okButton.onclick = (e) => {// arrow function keeps this (is hidden bind)
+            let valid = this.validators.checkMandatory(data);
+            if (valid === true) {
+                document.getElementById("button-error").style["color"] = `green`;
+                document.getElementById("button-error").innerText = `Thanks!`;
+                this.okCallback(e)
+            } else {
+                document.getElementById("button-error").style["color"] = `red`;
+                document.getElementById("button-error").innerText = ` Sorry, ${valid} mandatory field(s) left`
+            }
         };
     }
 
     if (typeof cancelCallback === 'function') {
         formBody.appendChild(cancelButton);
-        cancelButton.onclick = cancelCallback
+        inputCreators.addErrorBox(formBody,'button');
+        cancelButton.onclick = (e) => {
+            let save = this.getSave();
+            for (let [key,value] of Object.entries(save)) {
+                if (typeof(value) != "boolean" && !(value instanceof Date)) {
+                    document.getElementById(`${key}`).value = value;
+                }
+                if (value instanceof Date) {
+                    let date = `${value.getFullYear()}`;
+                    date += value.getMonth() < 10 ? `-0${value.getMonth()}` : `-${value.getMonth()}`;
+                    date += value.getDay() < 10 ? `-0${value.getDay()}` : `-${value.getDay()}`;
+                    document.getElementById(`${key}`).value = date;
+                }
+                if (typeof(value) == "boolean") {
+                    let array = document.querySelectorAll(`input[name='${key}'`);
+                    if (value) {
+                        for (let v of array) {
+                            if (v.value === "true") v.checked = "true"
+                        }
+                    } else {
+                        for (let v of array) {
+                            if (v.value === "false") v.checked = "true"
+                        }
+                    }
+                }
+            }
+            cancelCallback();
+        }
     }
     el.appendChild(formBody);
 
+    var save = {...data};
+    console.log(save);
     this.okCallback = okCallback;
     this.cancelCallback = cancelCallback;
     this.data = data;
+    this.getSave = () => {
+        return save;
+    };
 
     this.validators = {
         "e-mail"(input, key, emailRegEx) {
@@ -260,9 +319,42 @@ function Form(el, data, okCallback, cancelCallback) {
             document.getElementById(`${key}-error`).innerText = ``;
             return true;
         },
-        // password(input, key) {
-        //     console.log(key)
-        // }
+        password(input, key, passwordRegEx) {
+            if (input.value.match(passwordRegEx)) {
+                document.getElementById(`${key}-error`).innerText = ``;
+                return true;
+            } else {
+                document.getElementById(`${key}-error`).innerText = ` Your ${key} is not strong enough`;
+                return false;
+            }
+        },
+
+        checkMandatory(data) {
+            let mandatory = [...document.querySelectorAll(".mandatory")];
+            let number = mandatory.length;
+            for (let i = 0; i < mandatory.length; i++) {
+                for (let [key,value] of Object.entries(data)) {
+                    if (key === mandatory[i].getAttribute("id") && !!value) {
+                        number --;
+                    }
+                }
+            }
+            console.log(mandatory);
+            if (number === 0) {
+                return true;
+            } else {
+                return number;
+            }
+        },
+        highlightMandatory(element) {
+            if(element.classList.contains("mandatory")) {
+                if(!element.value) {
+                    element.style["box-shadow"] = "2px -1px 1px 0px rgba(255,0,0,1)";
+                } else {
+                    element.style["box-shadow"] = "";
+                }
+            }
+        }
 
     }
 
@@ -270,13 +362,13 @@ function Form(el, data, okCallback, cancelCallback) {
 
 
 let form  = new Form (formContainer, {
-    "name": 'Anakin',
+    "*name": 'Anakin',
     "*surname": 'Skywalker',
     "*password": '***',
     "e-mail": 'skywalker@yahoo.com',
     married: true,
     "*birthday": new Date((new Date).getTime() - 86400000 * 30 * 365)
-}, () => console.log('ok'), () => console.log('cancel'));
+}, () => console.log('ok'), () => console.log('All inputs are canceled.'));
 
 
 console.log(form.data);
