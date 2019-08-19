@@ -151,12 +151,13 @@ function Form(el, data, okCallback, cancelCallback) {
             if (key[0] == "*") {
                 renameKey(key, key.substring(1), data);
                 key = key.substring(1);
+                console.log(key)
             }
             input.oninput = () => {
-                this.validators.highlightMandatory(input);
-
+                data[key] = input.value;
                 if (typeof this.validators[key] == "function") {
                     if (typeof this.validators[key](data[key]) == "string") {
+                        console.log("passed")
                         document.getElementById(`${key}-error`).innerText = `${this.validators[key](data[key])}`;
                         data[key] = "";
                     } else {
@@ -166,6 +167,7 @@ function Form(el, data, okCallback, cancelCallback) {
                 else {
                     console.log("no validator attached")
                 }
+                this.validators.highlightMandatory(input);
             }
 
         //### Boolean inputs
