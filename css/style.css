@@ -10,12 +10,11 @@ div, input {
 input[type = "radio"] {
     display: inline-block;
 }
-label {
-    /*display: block;*/
+label::after {
+    content: attr(content);
+    color: red;
+    margin-left: 2px;
 }
 span {
-    color: #ff0000;
-}
-span[id*="error"] {
     color: #ff0000;
 }

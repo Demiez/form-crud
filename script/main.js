@@ -1,9 +1,14 @@
 function Form(el, data, okCallback, cancelCallback) {
-    // const renameKey = (oldkey,newkey,{ [oldkey] : old, ...others }) => {
-    //     return {
-    //         [newkey]: old, ...others
-    //     };
-    // };
+
+    var save = {...data};
+    this.inputs = [];
+    this.okCallback = okCallback;
+    this.cancelCallback = cancelCallback;
+    this.data = data;
+    this.getSave = () => {
+        return save;
+    };
+
     const renameKey = (oldkey,newkey,obj) => {
         obj[newkey] = obj[oldkey];
         delete obj[oldkey];
@@ -12,41 +17,29 @@ function Form(el, data, okCallback, cancelCallback) {
 
     const inputCreators = {
 
-        addErrorBox(target,key){
-            let errorBox = document.createElement("span");
-            let br = document.createElement("br");
-            errorBox.setAttribute('id', `${key}-error`);
-            target.appendChild(errorBox);
-            target.appendChild(br);
+        addErrorSpan(){
+            formBody.appendChild(document.createElement('span'));
+            formBody.appendChild(document.createElement('br'));
         },
 
-        addMandatory(target,key) {
-            if (key[0] == "*") {
-               let mandatory = document.createElement('span')
-               mandatory.innerText = " * ";
-               target.appendChild(mandatory);
-               return true;
-            }
-            return false;
-        },
-
-        string(key, value){
+        string(key, value, inputs){
+            let label = document.createElement('label');
             let input = document.createElement('input');
-            formBody.appendChild(input);
-            let mandatory = this.addMandatory(formBody,key);
-            if (mandatory) {
+            formBody.appendChild(label);
+            label.appendChild(input);
+            if (key[0] == "*") {
+                label.setAttribute('content', '*');
                 key = key.substring(1);
-                input.setAttribute("class", "mandatory");
             }
-            this.addErrorBox(formBody,key);
+            this.addErrorSpan();
             input.setAttribute("type", "text");
             input.setAttribute("placeholder", key);
-            input.setAttribute("id", key);
             input.value = value;
+            inputs.push(input);
             return input;
         },
 
-        boolean(key,value) {
+        boolean(key,value,inputs) {
             let radioDiv = document.createElement('div');
             formBody.appendChild(radioDiv).innerHTML = `${key}: `;
             let labelTrue = document.createElement('label');
@@ -72,65 +65,46 @@ function Form(el, data, okCallback, cancelCallback) {
             } else {
                 inputFalse.setAttribute("checked","true")
             }
+            inputs.push(inputTrue,inputFalse);
             return [inputTrue,inputFalse];
         },
 
-        date(key,value) {
+        date(key,value,inputs) {
             let label = document.createElement('label');
-            if (key[0] == "*") {
-                formBody.appendChild(label).innerText = `${key.substring(1)}: `;
-            } else {
-                formBody.appendChild(label).innerText = `${key}: `;
-            }
-
             let input = document.createElement('input');
-            label.appendChild(input);
-            let mandatory = this.addMandatory(label,key);
-            if (mandatory) {
+            if (key[0] == "*") {
                 key = key.substring(1);
-                input.setAttribute("class", "mandatory");
-                input.setAttribute("id", key);
+                label.setAttribute('content', '*');
             }
-            this.addErrorBox(label,key);
+            formBody.appendChild(label).innerText = `${key}: `;
+
+            this.addErrorSpan();
+            label.appendChild(input);
             input.setAttribute("type", "date");
 
             let date = `${value.getFullYear()}`;
             date += value.getMonth() < 10 ? `-0${value.getMonth()}` : `-${value.getMonth()}`;
-            date += value.getDay() < 10 ? `-0${value.getDay()}` : `-${value.getDay()}`;
+            date += value.getDate() < 10 ? `-0${value.getDate()}` : `-${value.getDate()}`;
 
             input.setAttribute("value", date);
-            input.setAttribute("id", key);
+            inputs.push(input);
             return input;
         },
 
-        password(key,value) {
+        password(key,value,inputs) {
             let label = document.createElement('label');
+            let input = document.createElement('input');
             if (key[0] == "*") {
-                formBody.appendChild(label).innerText = `${key.substring(1)}: `;
-            } else {
-                formBody.appendChild(label).innerText = `${key}: `;
-            }
-            let passwordInput = document.createElement('input');
-            label.appendChild(passwordInput);
-            let mandatory = this.addMandatory(label,key);
-            if (mandatory) {
                 key = key.substring(1);
-                passwordInput.setAttribute("class", "mandatory");
+                label.setAttribute('content', '*');
             }
-            this.addErrorBox(formBody,key);
-
-
-            let label02 = document.createElement('label');
-            formBody.appendChild(label02).innerText = `confirm ${key}: `;
-            let passwordConfirm = document.createElement('input');
-            formBody.appendChild(passwordConfirm);
-
-            passwordInput.setAttribute("type", "text");
-            passwordInput.setAttribute("id", key);
-            passwordConfirm.setAttribute("type", "text");
-            passwordConfirm.setAttribute("id", `confirm-${key}`);
-            this.addErrorBox(formBody,'password-confirm');
-            return [passwordInput, passwordConfirm];
+            formBody.appendChild(label); // .innerText = `${key}: `
+            this.addErrorSpan();
+            label.appendChild(input);
+            input.setAttribute("type", "text");
+            input.setAttribute("placeholder", key);
+            inputs.push(input);
+            return input;
         }
     };
 
@@ -142,26 +116,25 @@ function Form(el, data, okCallback, cancelCallback) {
 
     for (let [key, value] of Object.entries(data)) {
         let emailRegEx = /(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])/;
-        let passwordRegEx = /^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,})/;
 
         // ### String inputs + adjustable validation
         if (typeof value == "string" && !value.match(emailRegEx) && !value.includes("*")) {
-            let input = inputCreators.string(key,value);
-            // console.log(key[0], data);
+            let input = inputCreators.string(key,value,this.inputs,this.mandatory,this.errorBoxes);
+
             if (key[0] == "*") {
                 renameKey(key, key.substring(1), data);
                 key = key.substring(1);
-                console.log(key)
             }
+
             input.oninput = () => {
                 data[key] = input.value;
-                if (typeof this.validators[key] == "function") {
+                if (typeof this.validators[key] == "function") { // Проверяем есть ли валидатор
+
                     if (typeof this.validators[key](data[key]) == "string") {
-                        console.log("passed")
-                        document.getElementById(`${key}-error`).innerText = `${this.validators[key](data[key])}`;
+                        input.parentElement.nextSibling.innerText = `${this.validators[key](data[key])}`;
                         data[key] = "";
                     } else {
-                        document.getElementById(`${key}-error`).innerText = ``;
+                        input.parentElement.nextSibling.innerText = ``;
                     }
                 }
                 else {
@@ -172,7 +145,7 @@ function Form(el, data, okCallback, cancelCallback) {
 
         //### Boolean inputs
         } else if (typeof value == "boolean") {
-            let input = inputCreators.boolean(key,value);
+            let input = inputCreators.boolean(key,value,this.inputs);
             for (let i = 0; i<input.length; i++) {
                 input[i].onchange = () => {
                     data[key] = input[i].value;
@@ -181,7 +154,7 @@ function Form(el, data, okCallback, cancelCallback) {
 
         //### Date inputs + built-in validation
         } else if (value instanceof Date) {
-            let input = inputCreators.date(key,value);
+            let input = inputCreators.date(key,value, this.inputs);
             if (key[0] == "*") {
                 renameKey(key, key.substring(1), data);
                 key = key.substring(1);
@@ -191,52 +164,53 @@ function Form(el, data, okCallback, cancelCallback) {
                 if (typeof this.validators[key] == "function") {
                     if (this.validators[key](input, key)) {
                         data[key] = input.value;
+                        input.parentElement.nextSibling.innerText = '';
                     } else {
                         data[key] = "";
+                        input.parentElement.nextSibling.innerText = ` Wrong ${key}`;
                     }
                 }
             }
 
         //### Email input + built in regEx validation
-        } else if (value.match(emailRegEx)) {
-            let input = inputCreators.string(key,value);
+        } else if (typeof(value) != "object" && value.match(emailRegEx)) {
+            let input = inputCreators.string(key, value, this.inputs);
+            if (key[0] == "*") {
+                renameKey(key, key.substring(1), data);
+                key = key.substring(1);
+            }
             input.oninput = () => {
                 this.validators.highlightMandatory(input);
                 if (typeof this.validators[key] == "function") {
                     if (this.validators[key](input, key, emailRegEx)) {
+                        input.parentElement.nextSibling.innerText = ``;
                         data[key] = input.value;
+                    } else {
+                        input.parentElement.nextSibling.innerText = ` Wrong ${key}`;
                     }
                 }
             }
-        //### Password input + built in medium strength password validation (6 letters + 1 number or 1 uppercase)
+        //### Password input + medium strength password validation (6 letters + 1 number or 1 uppercase)
         } else if (value.includes("*")) {
-            let input = inputCreators.password(key, value);
+            let input = inputCreators.password(key, value,this.inputs);
             if (key[0] == "*") {
                 renameKey(key, key.substring(1), data);
                 key = key.substring(1);
             }
             data[key] = "";
-            input[0].oninput = () => {
-                this.validators.highlightMandatory(input[0]);
+            input.oninput = () => {
+                this.validators.highlightMandatory(input);
                 if (typeof this.validators[key] == "function") {
-                    if (this.validators[key](input[0], key, passwordRegEx)) {
-                        input[1].oninput = () => {
-                            console.log("checking pass")
-                            if (input[1].value === input[0].value) {
-                                document.getElementById(`password-confirm-error`).style['color'] = `green`;
-                                document.getElementById(`password-confirm-error`).innerText = ` ok`;
-                                data[key] = input[0].value;
-                            } else {
-                                document.getElementById(`password-confirm-error`).style['color'] = `red`;
-                                document.getElementById(`password-confirm-error`).innerText = ` Please confirm password in both fields`;
-                            }
-                        }
+                    if (this.validators[key](input, key)) {
+                        input.parentElement.nextSibling.innerText = ``;
+                        data[key] = input.value;
+                    } else {
+                        input.parentElement.nextSibling.innerText = ` Your ${key} is not strong enough`;
                     }
                 }
             }
         }
     }
-
 
     // ### Buttons
     let okButton = document.createElement('button');
@@ -249,42 +223,53 @@ function Form(el, data, okCallback, cancelCallback) {
     if (typeof okCallback === 'function') {
         formBody.appendChild(okButton);
         okButton.onclick = (e) => {// arrow function keeps this (is hidden bind)
-            let valid = this.validators.checkMandatory(data);
+            let valid = this.validators.checkMandatory(data,this.inputs);
             if (valid === true) {
-                document.getElementById("button-error").style["color"] = `green`;
-                document.getElementById("button-error").innerText = `Thanks!`;
+                okButton.nextSibling.nextSibling.style["color"] = `green`;
+                okButton.nextSibling.nextSibling.innerText = `Thanks!`;
                 this.okCallback(e)
             } else {
-                document.getElementById("button-error").style["color"] = `red`;
-                document.getElementById("button-error").innerText = ` Sorry, ${valid} mandatory field(s) left`
+                okButton.nextSibling.nextSibling.style["color"] = `red`;
+                okButton.nextSibling.nextSibling.innerText = ` Sorry, ${valid} mandatory field(s) left`
             }
         };
     }
 
     if (typeof cancelCallback === 'function') {
         formBody.appendChild(cancelButton);
-        inputCreators.addErrorBox(formBody,'button');
+        inputCreators.addErrorSpan();
         cancelButton.onclick = (e) => {
             let save = this.getSave();
+            for (let item of this.inputs) { //clears all red notifications
+                if (item.type != "radio") {
+                    item.parentElement.nextSibling.innerText = '';
+                    item.style["box-shadow"] = "";
+                }
+            }
             for (let [key,value] of Object.entries(save)) {
                 if (typeof(value) != "boolean" && !(value instanceof Date)) {
-                    document.getElementById(`${key}`).value = value;
+                    for(let item of this.inputs) {
+                        if (item.getAttribute('placeholder') === key.substring(1) || item.getAttribute('placeholder') === key) {
+                            item.value = value;
+                            if (value.includes("*")) item.value = "";
+                        }
+                    }
                 }
                 if (value instanceof Date) {
                     let date = `${value.getFullYear()}`;
                     date += value.getMonth() < 10 ? `-0${value.getMonth()}` : `-${value.getMonth()}`;
-                    date += value.getDay() < 10 ? `-0${value.getDay()}` : `-${value.getDay()}`;
-                    document.getElementById(`${key}`).value = date;
+                    date += value.getDate() < 10 ? `-0${value.getDate()}` : `-${value.getDate()}`;
+                    for(let item of this.inputs) {
+                        if (item.parentElement.innerText.includes(key.substring(1))) {
+                            item.value = date;
+                        }
+                    }
                 }
                 if (typeof(value) == "boolean") {
-                    let array = document.querySelectorAll(`input[name='${key}'`);
-                    if (value) {
-                        for (let v of array) {
-                            if (v.value === "true") v.checked = "true"
-                        }
-                    } else {
-                        for (let v of array) {
-                            if (v.value === "false") v.checked = "true"
+                    console.log(this.inputs);
+                    for(let item of this.inputs) {
+                        if(item.name === key && item.getAttribute("value") == value.toString()) {
+                            item.checked = "true"
                         }
                     }
                 }
@@ -294,54 +279,42 @@ function Form(el, data, okCallback, cancelCallback) {
     }
     el.appendChild(formBody);
 
-    var save = {...data};
-    console.log(save);
-    this.okCallback = okCallback;
-    this.cancelCallback = cancelCallback;
-    this.data = data;
-    this.getSave = () => {
-        return save;
-    };
-
+    // validators can be assigned to form through form.validators.<name>
     this.validators = {
-        "e-mail"(input, key, emailRegEx) {
-            if (input.value.match(emailRegEx)) {
-                document.getElementById(`${key}-error`).innerText = ``;
+        name(value, key, data, input){
+            if (value.length > 2 && value[0].toUpperCase() == value[0] && !value.includes(' ')) {
                 return true;
             } else {
-                document.getElementById(`${key}-error`).innerText = ` Wrong ${key}`;
-                return false;
+                return ' Wrong name';
             }
+        },
+        surname(value, key, data, input){
+            if (value.length > 2 && value[0].toUpperCase() == value[0] && !value.includes(' ')) {
+                return true;
+            } else {
+                return ' Wrong surname';
+            }
+        },
+        "e-mail"(input, key, emailRegEx) {
+            return !!input.value.match(emailRegEx);
         },
         birthday(input, key) {
-            if (new Date(input.value).getFullYear() < 1900 || new Date(input.value).getFullYear() > new Date().getFullYear()) {
-                document.getElementById(`${key}-error`).innerText = ` Wrong ${key}`;
-                return false;
-            }
-            document.getElementById(`${key}-error`).innerText = ``;
-            return true;
+            return !!!(new Date(input.value).getFullYear() < 1900 || new Date(input.value).getFullYear() > new Date().getFullYear());
+
         },
-        password(input, key, passwordRegEx) {
-            if (input.value.match(passwordRegEx)) {
-                document.getElementById(`${key}-error`).innerText = ``;
-                return true;
-            } else {
-                document.getElementById(`${key}-error`).innerText = ` Your ${key} is not strong enough`;
-                return false;
-            }
+        password(input, key) {
+            let passwordRegEx = /^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,})/;
+            return !!input.value.match(passwordRegEx);
         },
 
-        checkMandatory(data) {
-            let mandatory = [...document.querySelectorAll(".mandatory")];
-            let number = mandatory.length;
-            for (let i = 0; i < mandatory.length; i++) {
-                for (let [key,value] of Object.entries(data)) {
-                    if (key === mandatory[i].getAttribute("id") && !!value) {
-                        number --;
-                    }
+        checkMandatory(data, inputs) {
+            let number = 0;
+            for (let item of inputs) {
+                if (item.parentElement.getAttribute('content') === "*" && !!!item.value) {
+                    number ++
                 }
             }
-            console.log(mandatory);
+
             if (number === 0) {
                 return true;
             } else {
@@ -349,7 +322,7 @@ function Form(el, data, okCallback, cancelCallback) {
             }
         },
         highlightMandatory(element) {
-            if(element.classList.contains("mandatory")) {
+            if(element.parentElement.getAttribute('content') === "*") {
                 if(!element.value) {
                     element.style["box-shadow"] = "2px -1px 1px 0px rgba(255,0,0,1)";
                 } else {
@@ -369,21 +342,21 @@ let form  = new Form (formContainer, {
     "*password": '***',
     "e-mail": 'skywalker@yahoo.com',
     married: true,
+    hasDog: false,
     "*birthday": new Date((new Date).getTime() - 86400000 * 30 * 365)
-}, () => console.log('ok'), () => console.log('All inputs are canceled.'));
+}, () => console.log(form.data), () => console.log('All inputs are canceled.'));
+
+let form02  = new Form (formContainer, {
+    "*name": 'Darth',
+    "*surname": 'Vader',
+    "*password": '***',
+    "*e-mail": 'death-star@gmail.com',
+    isEvil: true,
+    "birthday": new Date((new Date).getTime() - 86400000 * 55 * 365)
+}, () => console.log(form02.data), () => console.log('All inputs are canceled.'));
 
 
-console.log(form.data);
-form.okCallback = () => console.log(form.data);
-
-//form.validators.name = (value, key, data, input) => value[0].toUpperCase() == value[0] && !value.includes(' ') && value.length > 2 ? true : 'Wrong name'
-
-form.validators.name = (value, key, data, input) =>
-    value.length > 2 &&
-    value[0].toUpperCase() == value[0] &&
-    !value.includes(' ') ? true : ' Wrong name';
-
-form.validators.surname = (value, key, data, input) =>
-    value.length > 2 &&
-    value[0].toUpperCase() == value[0] &&
-    !value.includes(' ') ? true : ' Wrong surname';
+// form.validators.name = (value, key, data, input) =>
+//     value.length > 2 &&
+//     value[0].toUpperCase() == value[0] &&
+//     !value.includes(' ') ? true : ' Wrong name';

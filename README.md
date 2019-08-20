@@ -13,6 +13,7 @@ cancel - must clear all the inputs<br>
 9) mandatory fields are highlighted if empty
 10) password and password confirmation validation
 11) ok button checks following before sending request (for now just into console without JSON formation):
-- if mandatory fields are not empty
-- all validators are passed
-12) cancel button restores all input fields to the moment of object creation (including radio buttons) 
+<br>*if mandatory fields are not empty
+<br>*all validators are passed
+12) cancel button restores all input fields to the moment of object creation (including radio buttons) and clears notifications<br>
+13) multiple form support due to usage of closures and absence of id/class identifications
